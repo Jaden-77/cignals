@@ -1,8 +1,0 @@
-MUSIC SEGMENTATION RESULTS
-==================================================
-
-Total Duration:  00:39
-
-Intro:   00:00 - 00:05
-Main:    00:05 - 00:34
-Outro:   00:34 - 00:39
