@@ -106,19 +106,38 @@
                         <h3>🎬 Intro</h3>
                         <p class="segment-time">00:00 - <span id="introEnd">--:--</span></p>
                         <p class="segment-duration">Duration: <span id="introDuration">0.0</span>s</p>
+                        <div class="segment-progress">
+                            <div class="segment-progress-bar" id="introProgress"></div>
+                        </div>
+                        <button class="btn-play" onclick="playSegment('intro')">▶ Play Intro</button>
                     </div>
 
                     <div class="segment-card main-card">
                         <h3>🎵 Main Section</h3>
                         <p class="segment-time"><span id="mainStart">--:--</span> - <span id="mainEnd">--:--</span></p>
                         <p class="segment-duration">Duration: <span id="mainDuration">0.0</span>s</p>
+                        <div class="segment-progress">
+                            <div class="segment-progress-bar" id="mainProgress"></div>
+                        </div>
+                        <button class="btn-play" onclick="playSegment('main')">▶ Play Main</button>
                     </div>
 
                     <div class="segment-card outro-card">
                         <h3>🎬 Outro</h3>
                         <p class="segment-time"><span id="outroStart">--:--</span> - <span id="totalDuration">--:--</span></p>
                         <p class="segment-duration">Duration: <span id="outroDuration">0.0</span>s</p>
+                        <div class="segment-progress">
+                            <div class="segment-progress-bar" id="outroProgress"></div>
+                        </div>
+                        <button class="btn-play" onclick="playSegment('outro')">▶ Play Outro</button>
                     </div>
+                </div>
+
+                <div class="audio-player-section" style="display: none;" id="audioPlayerSection">
+                    <h3>Audio Playback</h3>
+                    <audio id="audioPlayer" controls preload="auto">
+                        Your browser does not support audio playback.
+                    </audio>
                 </div>
 
                 <div class="visualization-section">
@@ -250,11 +269,108 @@
             document.getElementById('metricMainPercent').textContent = `${mainPercent}%`;
             document.getElementById('metricOutroPercent').textContent = `${outroPercent}%`;
 
+            // Set up audio player
+            setupAudioPlayer(data);
+
             // Show results
             results.style.display = 'block';
 
             // Scroll to results
             results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Audio playback functionality
+        let segmentTimes = {
+            intro: { start: 0, end: 0 },
+            main: { start: 0, end: 0 },
+            outro: { start: 0, end: 0 }
+        };
+
+        let audioPlayer = null;
+        let currentSegment = null;
+
+        function setupAudioPlayer(data) {
+            // Store segment times
+            segmentTimes.intro = { start: 0, end: data.intro_end };
+            segmentTimes.main = { start: data.intro_end, end: data.outro_start };
+            segmentTimes.outro = { start: data.outro_start, end: data.duration };
+
+            // Set up audio player
+            audioPlayer = document.getElementById('audioPlayer');
+            audioPlayer.src = `/view/${data.audio_file}`;
+            document.getElementById('audioPlayerSection').style.display = 'block';
+
+            // Listen for time updates
+            audioPlayer.removeEventListener('timeupdate', checkSegmentEnd);
+            audioPlayer.addEventListener('timeupdate', checkSegmentEnd);
+        }
+
+        function playSegment(segmentName) {
+            if (!audioPlayer) return;
+
+            const segment = segmentTimes[segmentName];
+            currentSegment = { ...segment, name: segmentName };
+
+            // Set playback position
+            audioPlayer.currentTime = segment.start;
+
+            // Play
+            audioPlayer.play();
+
+            // Update button states
+            updatePlayButtons(segmentName);
+        }
+
+        function checkSegmentEnd() {
+            if (!currentSegment) return;
+
+            // Calculate progress
+            const elapsed = audioPlayer.currentTime - currentSegment.start;
+            const duration = currentSegment.end - currentSegment.start;
+            const progress = Math.min((elapsed / duration) * 100, 100);
+
+            // Update progress bar
+            const progressBar = document.getElementById(`${currentSegment.name}Progress`);
+            if (progressBar) {
+                progressBar.style.width = progress + '%';
+            }
+
+            // Stop at segment end
+            if (audioPlayer.currentTime >= currentSegment.end) {
+                audioPlayer.pause();
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                }
+                currentSegment = null;
+                resetPlayButtons();
+            }
+        }
+
+        function updatePlayButtons(playing) {
+            const buttons = {
+                'intro': document.querySelector('.intro-card .btn-play'),
+                'main': document.querySelector('.main-card .btn-play'),
+                'outro': document.querySelector('.outro-card .btn-play')
+            };
+
+            // Reset all
+            Object.keys(buttons).forEach(key => {
+                if (buttons[key]) {
+                    const name = key.charAt(0).toUpperCase() + key.slice(1);
+                    buttons[key].textContent = `▶ Play ${name}`;
+                    buttons[key].classList.remove('playing');
+                }
+            });
+
+            // Highlight playing
+            if (buttons[playing]) {
+                buttons[playing].textContent = `⏸ Playing...`;
+                buttons[playing].classList.add('playing');
+            }
+        }
+
+        function resetPlayButtons() {
+            updatePlayButtons(null);
         }
 
         function showError(message) {

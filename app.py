@@ -8,6 +8,7 @@ import os
 import time
 import json
 import numpy as np
+import soundfile as sf
 from flask import Flask, render_template, request, send_file, jsonify, url_for
 from werkzeug.utils import secure_filename
 import matplotlib
@@ -81,6 +82,11 @@ def process_music_file(input_path, frame_len=2048, hop_len=512, smooth_sec=1.0,
         # Create visualization
         create_plot(times, rms_smooth, threshold, segments, plot_path)
 
+        # Save audio file for playback
+        audio_filename = f'audio_{timestamp}.wav'
+        audio_path = os.path.join(app.config['OUTPUT_FOLDER'], audio_filename)
+        sf.write(audio_path, audio, fs)
+
         # Format results
         result = {
             'success': True,
@@ -92,6 +98,7 @@ def process_music_file(input_path, frame_len=2048, hop_len=512, smooth_sec=1.0,
             'duration_formatted': format_timestamp(segments['duration']),
             'main_duration': float(segments['outro_start'] - segments['intro_end']),
             'plot_file': plot_filename,
+            'audio_file': audio_filename,
             'sample_rate': int(fs),
             'threshold': threshold
         }
