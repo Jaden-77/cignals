@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Music Segmentation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Music Segmentation</h1>
+            <p class="subtitle">Automatic Intro/Main/Outro Detection - Classical DSP</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link">Upload</a>
+            <a href="/about" class="nav-link active">About</a>
+        </nav>
+
+        <main>
+            <div class="card">
+                <h2>How It Works</h2>
+
+                <section>
+                    <h3>Short-Time Energy Analysis</h3>
+                    <p>
+                        This tool analyzes the <strong>energy profile</strong> of music to automatically detect
+                        intro, main, and outro sections. Unlike AI-based methods, this uses classical
+                        <strong>digital signal processing</strong> that is fully explainable.
+                    </p>
+
+                    <div class="theory-box">
+                        <p><strong>RMS Energy:</strong> RMS[i] = sqrt(mean(x[n]²))</p>
+                        <p><strong>Smoothing:</strong> Moving average filter (FIR convolution)</p>
+                        <p><strong>Threshold:</strong> Adaptive (percentile or statistics-based)</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Processing Steps</h3>
+                    <ol>
+                        <li><strong>Framing:</strong> Divide audio into overlapping frames (2048 samples)</li>
+                        <li><strong>RMS Computation:</strong> Calculate energy for each frame</li>
+                        <li><strong>Smoothing:</strong> Apply moving average filter (removes noise)</li>
+                        <li><strong>Thresholding:</strong> Compute adaptive threshold based on energy distribution</li>
+                        <li><strong>Boundary Detection:</strong> Find first/last sustained active regions</li>
+                        <li><strong>Segmentation:</strong> Label intro/main/outro based on boundaries</li>
+                    </ol>
+                </section>
+
+                <section>
+                    <h3>Detected Segments</h3>
+
+                    <div class="output-description">
+                        <div class="output-item">
+                            <h4>🎬 Intro</h4>
+                            <p>From start until first sustained energy increase. Typically quieter opening section.</p>
+                        </div>
+
+                        <div class="output-item">
+                            <h4>🎵 Main Section</h4>
+                            <p>Core of the song with highest energy. Contains verses, choruses, bridge.</p>
+                        </div>
+
+                        <div class="output-item">
+                            <h4>🎬 Outro</h4>
+                            <p>From last sustained energy to end. Often a fade-out or final chorus.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Parameters Explained</h3>
+
+                    <dl class="metrics-explanation">
+                        <dt>Smoothing Window</dt>
+                        <dd>Duration of moving average filter. Larger = more stable, but less precise. Default: 1.0s</dd>
+
+                        <dt>Min Section Duration</dt>
+                        <dd>Minimum length for intro/outro sections. Prevents false detection. Default: 5.0s</dd>
+
+                        <dt>Threshold Mode</dt>
+                        <dd>
+                            <strong>Percentile:</strong> Based on distribution (e.g., 60th percentile)<br>
+                            <strong>Statistics:</strong> Based on median + k*std
+                        </dd>
+
+                        <dt>Threshold Value</dt>
+                        <dd>Adjusts sensitivity. Lower = more sensitive (detects quieter sections)</dd>
+
+                        <dt>Gap Merge</dt>
+                        <dd>Fills small gaps in active regions for stable boundaries. Default: 1.0s</dd>
+                    </dl>
+                </section>
+
+                <section>
+                    <h3>When It Works Best</h3>
+                    <div class="alert alert-warning">
+                        <h4>Best Results:</h4>
+                        <ul>
+                            <li>Pop/rock songs with <strong>clear intro/outro</strong></li>
+                            <li>Songs with <strong>quiet intro</strong> that builds up</li>
+                            <li>Music with <strong>fade-out ending</strong></li>
+                            <li>Tracks with <strong>distinct energy levels</strong> between sections</li>
+                        </ul>
+
+                        <h4>May Need Tuning:</h4>
+                        <ul>
+                            <li>Classical or ambient music (no clear boundaries)</li>
+                            <li>Songs that start loud and stay loud</li>
+                            <li>Very dynamic structure (quiet chorus, loud verse)</li>
+                            <li>Electronic music with constant energy</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Tuning Tips</h3>
+
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Problem</th>
+                                <th>Solution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Intro detected too late</td>
+                                <td>Lower threshold value (try 50 instead of 60)</td>
+                            </tr>
+                            <tr>
+                                <td>Outro detected too early</td>
+                                <td>Increase min section duration (try 8s)</td>
+                            </tr>
+                            <tr>
+                                <td>Boundaries are jumpy</td>
+                                <td>Increase smoothing window (try 2.0s)</td>
+                            </tr>
+                            <tr>
+                                <td>Multiple false boundaries</td>
+                                <td>Increase gap merge (try 2.0s)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <section>
+                    <h3>Why Classical DSP (Not AI)?</h3>
+
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>This Tool (DSP)</th>
+                                <th>AI/ML Methods</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Training Data</td>
+                                <td>None needed</td>
+                                <td>Requires large datasets</td>
+                            </tr>
+                            <tr>
+                                <td>Processing Speed</td>
+                                <td>Very fast (< 2s)</td>
+                                <td>Slower (GPU often needed)</td>
+                            </tr>
+                            <tr>
+                                <td>Explainability</td>
+                                <td>Fully transparent</td>
+                                <td>Black box</td>
+                            </tr>
+                            <tr>
+                                <td>Accuracy</td>
+                                <td>Medium-High</td>
+                                <td>Very High</td>
+                            </tr>
+                            <tr>
+                                <td>Tunability</td>
+                                <td>Full parameter control</td>
+                                <td>Limited</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p>
+                        <strong>Educational Value:</strong> Every step is mathematically defined and demonstrates
+                        core concepts in Signals & Systems: windowing, convolution, thresholding, time-domain analysis.
+                    </p>
+                </section>
+
+                <section>
+                    <h3>Use Cases</h3>
+                    <ul>
+                        <li><strong>Music Streaming:</strong> Generate song previews automatically</li>
+                        <li><strong>DJ Software:</strong> Find intro/outro points for smooth mixing</li>
+                        <li><strong>Audio Editing:</strong> Quick navigation to song sections</li>
+                        <li><strong>Music Research:</strong> Analyze song structure patterns</li>
+                        <li><strong>Podcast Editing:</strong> Detect intro/outro music segments</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3>Technical Details</h3>
+                    <ul>
+                        <li><strong>Supported Formats:</strong> WAV, MP3</li>
+                        <li><strong>Max File Size:</strong> 100 MB</li>
+                        <li><strong>Processing Time:</strong> ~0.5-2 seconds for 3-minute song</li>
+                        <li><strong>Sample Rates:</strong> Any standard rate (44.1k, 48k, etc.)</li>
+                        <li><strong>Frame Size:</strong> 2048 samples (default)</li>
+                        <li><strong>Hop Size:</strong> 512 samples (75% overlap)</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h3>References</h3>
+                    <ul>
+                        <li><a href="https://en.wikipedia.org/wiki/Short-time_energy" target="_blank">Short-Time Energy (Wikipedia)</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Moving_average" target="_blank">Moving Average Filters (Wikipedia)</a></li>
+                        <li><a href="https://en.wikipedia.org/wiki/Music_information_retrieval" target="_blank">Music Information Retrieval (Wikipedia)</a></li>
+                    </ul>
+                </section>
+
+                <a href="/" class="btn btn-primary">Back to Upload</a>
+            </div>
+        </main>
+
+        <footer>
+            <p>Signals & Systems Educational Project | Classical DSP - No AI</p>
+            <p>Uses Short-Time Energy Analysis & Adaptive Thresholding</p>
+        </footer>
+    </div>
+</body>
+</html>

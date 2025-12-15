@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Segmentation - Intro/Main/Outro Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Music Segmentation</h1>
+            <p class="subtitle">Automatic Intro/Main/Outro Detection - Classical DSP</p>
+        </header>
+
+        <nav>
+            <a href="/" class="nav-link active">Upload</a>
+            <a href="/about" class="nav-link">About</a>
+        </nav>
+
+        <main>
+            <div class="card">
+                <h2>Upload Music File</h2>
+                <p>Upload an audio file (WAV or MP3) to automatically detect intro, main, and outro sections.</p>
+
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="audio_file">Select Audio File</label>
+                        <input type="file" id="audio_file" name="audio_file" accept=".wav,.mp3" required>
+                        <small>Supported formats: WAV, MP3 | Max size: 100 MB</small>
+                    </div>
+
+                    <details class="advanced-params">
+                        <summary>
+                            ⚙️ Advanced Parameters (Optional - Click to Expand)
+                        </summary>
+
+                        <div class="params-content">
+                            <div class="form-group">
+                                <p class="help-text">Adjust these if detection isn't accurate. Defaults work for most songs.</p>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="smooth_sec">Smoothing Window (seconds) ❓</label>
+                                    <input type="number" id="smooth_sec" name="smooth_sec" value="1.0" min="0.1" max="10" step="0.1" required>
+                                    <small>Default: 1.0s | Larger = more stable</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="min_sec">Min Section Duration (seconds) ❓</label>
+                                    <input type="number" id="min_sec" name="min_sec" value="5.0" min="1" max="30" step="0.5" required>
+                                    <small>Default: 5.0s | Prevents false detection</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="thr_mode">Threshold Mode ❓</label>
+                                    <select id="thr_mode" name="thr_mode" required>
+                                        <option value="percentile" selected>Percentile</option>
+                                        <option value="stats">Statistics</option>
+                                    </select>
+                                    <small>Percentile recommended</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="thr_value">Threshold Value ❓</label>
+                                    <input type="number" id="thr_value" name="thr_value" value="60" min="1" max="100" required>
+                                    <small>60 = 60th percentile | Lower = more sensitive</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="gap_merge_sec">Gap Merge (seconds) ❓</label>
+                                    <input type="number" id="gap_merge_sec" name="gap_merge_sec" value="1.0" min="0" max="5" step="0.1" required>
+                                    <small>Default: 1.0s | Fills small gaps</small>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        Analyze Music
+                    </button>
+                </form>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="loadingIndicator" class="loading-container" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing your music... This may take a few moments.</p>
+            </div>
+
+            <!-- Error message -->
+            <div id="errorMessage" class="alert alert-error" style="display: none;">
+                <h3>Error</h3>
+                <p id="errorText"></p>
+            </div>
+
+            <!-- Results section -->
+            <div id="results" class="card" style="display: none;">
+                <h2>Segmentation Results</h2>
+
+                <div class="segments-display">
+                    <div class="segment-card intro-card">
+                        <h3>🎬 Intro</h3>
+                        <p class="segment-time">00:00 - <span id="introEnd">--:--</span></p>
+                        <p class="segment-duration">Duration: <span id="introDuration">0.0</span>s</p>
+                    </div>
+
+                    <div class="segment-card main-card">
+                        <h3>🎵 Main Section</h3>
+                        <p class="segment-time"><span id="mainStart">--:--</span> - <span id="mainEnd">--:--</span></p>
+                        <p class="segment-duration">Duration: <span id="mainDuration">0.0</span>s</p>
+                    </div>
+
+                    <div class="segment-card outro-card">
+                        <h3>🎬 Outro</h3>
+                        <p class="segment-time"><span id="outroStart">--:--</span> - <span id="totalDuration">--:--</span></p>
+                        <p class="segment-duration">Duration: <span id="outroDuration">0.0</span>s</p>
+                    </div>
+                </div>
+
+                <div class="visualization-section">
+                    <h3>Energy Analysis</h3>
+                    <img id="plotImage" src="" alt="Segmentation Plot" class="plot-image">
+                    <a id="plotDownload" class="btn btn-download" download>Download Plot</a>
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Processing Details</h3>
+                    <table class="metrics-table">
+                        <tr>
+                            <td>Total Duration:</td>
+                            <td id="metricDuration">-</td>
+                        </tr>
+                        <tr>
+                            <td>Sample Rate:</td>
+                            <td id="metricSampleRate">-</td>
+                        </tr>
+                        <tr>
+                            <td>Threshold Value:</td>
+                            <td id="metricThreshold">-</td>
+                        </tr>
+                        <tr>
+                            <td>Intro Percentage:</td>
+                            <td id="metricIntroPercent">-</td>
+                        </tr>
+                        <tr>
+                            <td>Main Percentage:</td>
+                            <td id="metricMainPercent">-</td>
+                        </tr>
+                        <tr>
+                            <td>Outro Percentage:</td>
+                            <td id="metricOutroPercent">-</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <button class="btn btn-secondary" onclick="resetForm()">
+                    Analyze Another File
+                </button>
+            </div>
+        </main>
+
+        <footer>
+            <p>Signals & Systems Educational Project | Classical DSP - No AI</p>
+            <p>Uses Short-Time Energy Analysis & Adaptive Thresholding</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+        const results = document.getElementById('results');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Hide previous results/errors
+            errorMessage.style.display = 'none';
+            results.style.display = 'none';
+
+            // Show loading
+            loadingIndicator.style.display = 'block';
+            submitBtn.disabled = true;
+
+            // Prepare form data
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                loadingIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+
+                if (response.ok && data.success) {
+                    // Show results
+                    displayResults(data);
+                } else {
+                    // Show error
+                    showError(data.error || 'An error occurred during processing');
+                }
+
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+                showError('Network error: ' + error.message);
+            }
+        });
+
+        function displayResults(data) {
+            // Update segment times
+            document.getElementById('introEnd').textContent = data.intro_end_formatted;
+            document.getElementById('mainStart').textContent = data.intro_end_formatted;
+            document.getElementById('mainEnd').textContent = data.outro_start_formatted;
+            document.getElementById('outroStart').textContent = data.outro_start_formatted;
+            document.getElementById('totalDuration').textContent = data.duration_formatted;
+
+            // Update durations
+            document.getElementById('introDuration').textContent = data.intro_end.toFixed(1);
+            document.getElementById('mainDuration').textContent = data.main_duration.toFixed(1);
+            document.getElementById('outroDuration').textContent = (data.duration - data.outro_start).toFixed(1);
+
+            // Update plot
+            const plotUrl = `/view/${data.plot_file}`;
+            document.getElementById('plotImage').src = plotUrl;
+            document.getElementById('plotDownload').href = `/download/${data.plot_file}`;
+            document.getElementById('plotDownload').download = data.plot_file;
+
+            // Update metrics
+            document.getElementById('metricDuration').textContent = data.duration_formatted;
+            document.getElementById('metricSampleRate').textContent = `${data.sample_rate} Hz`;
+            document.getElementById('metricThreshold').textContent = data.threshold.toFixed(6);
+
+            // Calculate percentages
+            const introPercent = (data.intro_end / data.duration * 100).toFixed(1);
+            const mainPercent = (data.main_duration / data.duration * 100).toFixed(1);
+            const outroPercent = ((data.duration - data.outro_start) / data.duration * 100).toFixed(1);
+
+            document.getElementById('metricIntroPercent').textContent = `${introPercent}%`;
+            document.getElementById('metricMainPercent').textContent = `${mainPercent}%`;
+            document.getElementById('metricOutroPercent').textContent = `${outroPercent}%`;
+
+            // Show results
+            results.style.display = 'block';
+
+            // Scroll to results
+            results.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            errorMessage.style.display = 'block';
+            errorMessage.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            form.reset();
+            results.style.display = 'none';
+            errorMessage.style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
